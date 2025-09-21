@@ -1,0 +1,20 @@
+{
+  "name": "brokex-margin-listener",
+  "version": "1.0.0",
+  "description": "Listen to MarginSettled events and update Supabase leaderboard",
+  "main": "listener.js",
+  "type": "commonjs",
+  "license": "MIT",
+  "scripts": {
+    "start": "node listener.js",
+    "dev": "nodemon listener.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "dotenv": "^16.4.5",
+    "ethers": "^5.7.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
