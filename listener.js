@@ -15,7 +15,7 @@ const { createClient } = require('@supabase/supabase-js');
 const WSS_URL      = process.env.WSS_URL || 'wss://testnet.dplabs-internal.com';
 const CONTRACT     = (process.env.CONTRACT || '').trim();
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').trim();
-const SUPABASE_KEY = (process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY || '').trim();
+const SUPABASE_KEY = (process.env.SUPABASE_KEY || '').trim();
 const DECIMALS     = parseInt(process.env.DECIMALS || '6', 10);
 
 if (!CONTRACT) {
@@ -40,6 +40,7 @@ const seen = new Set(); // dédoublonnage (txHash:logIndex)
 /** Purge simple du Set pour éviter de grossir à l'infini */
 function gcSeen(max = 50000) {
   if (seen.size <= max) return;
+  // stratégie simple : clear complet (tu peux faire mieux avec une queue si besoin)
   seen.clear();
 }
 
@@ -75,12 +76,12 @@ async function pushToSupabase(trader, deltaStr) {
 function attachListeners() {
   if (!provider) {
     provider = new ethers.providers.WebSocketProvider(WSS_URL);
-
     provider._websocket.on('open', () => {
       console.log('🔌 WSS connected');
     });
     provider._websocket.on('close', (code) => {
       console.warn('🔌 WSS closed:', code);
+      // tentative de reconnexion après 2s
       setTimeout(reconnect, 2000);
     });
     provider._websocket.on('error', (err) => {
@@ -105,6 +106,11 @@ function attachListeners() {
       );
     }
   });
+
+  // debug blocks (optionnel)
+  provider.on('block', (bn) => {
+    // console.log('⛓️ new block', bn);
+  });
 }
 
 function disconnect() {
@@ -121,7 +127,6 @@ function disconnect() {
 }
 
 function reconnect() {
-  console.log("♻️ Reconnecting to WSS…");
   disconnect();
   attachListeners();
 }
@@ -129,15 +134,10 @@ function reconnect() {
 // start
 attachListeners();
 
-// Watchdog: reconnect toutes les heures
-setInterval(() => {
-  console.log("⏰ Hourly reconnect");
-  reconnect();
-}, 1000 * 60 * 60);
-
 // graceful shutdown
 process.on('SIGINT', () => {
   console.log('\nShutting down…');
   disconnect();
   process.exit(0);
 });
+
